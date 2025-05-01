@@ -1,0 +1,216 @@
+# code/fog-layer/docker-compose.yml
+version: '3.8'
+
+services:
+  # MQTT Broker
+  emqx:
+    image: emqx/emqx:4.4.5
+    container_name: emqx
+    restart: always
+    ports:
+      - "1883:1883"   # MQTT port
+      - "8083:8083"   # MQTT over WebSocket
+      - "8883:8883"   # MQTT over TLS
+      - "8084:8084"   # MQTT over WSS
+      - "18083:18083" # Dashboard
+      - "9001:9001"   # Dashboard WebSocket
+    volumes:
+      - ./config/emqx_auth.conf:/etc/emqx/plugins/emqx_auth_username.conf
+      - emqx-data:/opt/emqx/data
+      - emqx-etc:/opt/emqx/etc
+      - emqx-log:/opt/emqx/log
+    environment:
+      - EMQX_ALLOW_ANONYMOUS=false
+      - EMQX_ACL_NOMATCH=deny
+      - EMQX_DASHBOARD__DEFAULT_USER__LOGIN=admin
+      - EMQX_DASHBOARD__DEFAULT_USER__PASSWORD=forest-fire-wsn
+      - EMQX_LOADED_PLUGINS=emqx_management,emqx_dashboard,emqx_auth_username
+    networks:
+      - wsn-network
+
+  # Node-RED for data flow management
+  nodered:
+    image: nodered/node-red:2.2.2
+    container_name: nodered
+    restart: always
+    depends_on:
+      - emqx
+      - influxdb
+    ports:
+      - "1880:1880"
+    volumes:
+      - ./config/nodered:/data
+    environment:
+      - TZ=UTC
+      - NODE_RED_ENABLE_PROJECTS=true
+    networks:
+      - wsn-network
+
+  # InfluxDB for time-series data storage
+  influxdb:
+    image: influxdb:2.2.0
+    container_name: influxdb
+    restart: always
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+      - influxdb-config:/etc/influxdb2
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=forest-fire-wsn
+      - DOCKER_INFLUXDB_INIT_ORG=wsn
+      - DOCKER_INFLUXDB_INIT_BUCKET=fire_monitoring
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=wsntoken123456
+    networks:
+      - wsn-network
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:9.0.5
+    container_name: grafana
+    restart: always
+    depends_on:
+      - influxdb
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
+      - ./config/grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=forest-fire-wsn
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-worldmap-panel
+    networks:
+      - wsn-network
+
+  # LoRa Gateway Bridge
+  lora-gateway-bridge:
+    image: chirpstack/chirpstack-gateway-bridge:3.14.0
+    container_name: lora-gateway-bridge
+    restart: always
+    ports:
+      - "1700:1700/udp"
+    volumes:
+      - ./config/chirpstack/gateway-bridge:/etc/chirpstack-gateway-bridge
+    depends_on:
+      - emqx
+    networks:
+      - wsn-network
+
+  # LoRa Network Server
+  lora-network-server:
+    image: chirpstack/chirpstack-network-server:3.16.0
+    container_name: lora-network-server
+    restart: always
+    volumes:
+      - ./config/chirpstack/network-server:/etc/chirpstack-network-server
+    depends_on:
+      - postgres
+      - redis
+      - emqx
+    networks:
+      - wsn-network
+
+  # LoRa Application Server
+  lora-app-server:
+    image: chirpstack/chirpstack-application-server:3.17.0
+    container_name: lora-app-server
+    restart: always
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config/chirpstack/application-server:/etc/chirpstack-application-server
+    depends_on:
+      - postgres
+      - redis
+      - lora-network-server
+    networks:
+      - wsn-network
+
+  # PostgreSQL for LoRa server data
+  postgres:
+    image: postgres:13-alpine
+    container_name: postgres
+    restart: always
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=chirpstack
+    networks:
+      - wsn-network
+
+  # Redis for LoRa server cache
+  redis:
+    image: redis:6-alpine
+    container_name: redis
+    restart: always
+    volumes:
+      - redis-data:/data
+    networks:
+      - wsn-network
+
+  # API Server for frontend
+  api-server:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: api-server
+    restart: always
+    depends_on:
+      - postgres
+      - emqx
+      - influxdb
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - MQTT_BROKER=mqtt://emqx:1883
+      - MQTT_USER=wsn-user
+      - MQTT_PASSWORD=wsn-password
+      - DB_HOST=postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=chirpstack
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=wsntoken123456
+      - INFLUXDB_ORG=wsn
+      - INFLUXDB_BUCKET=fire_monitoring
+    networks:
+      - wsn-network
+
+  # Web Dashboard frontend
+  web-dashboard:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: web-dashboard
+    restart: always
+    depends_on:
+      - api-server
+    ports:
+      - "80:80"
+    networks:
+      - wsn-network
+
+networks:
+  wsn-network:
+    driver: bridge
+
+volumes:
+  emqx-data:
+  emqx-etc:
+  emqx-log:
+  influxdb-data:
+  influxdb-config:
+  grafana-data:
+  postgres-data:
+  redis-data:
