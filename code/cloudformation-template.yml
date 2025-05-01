@@ -1,0 +1,331 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Forest Fire WSN IoT Cloud Deployment'
+
+Parameters:
+  EnvironmentName:
+    Description: Environment name - dev, staging, or prod
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+
+  InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: t3.medium
+    AllowedValues:
+      - t3.small
+      - t3.medium
+      - t3.large
+    ConstraintDescription: Must be a valid EC2 instance type.
+
+  KeyPairName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: Must be the name of an existing EC2 KeyPair.
+
+  SSHLocation:
+    Description: IP address range that can SSH to the EC2 instances
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 0.0.0.0/0
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: Must be a valid CIDR range.
+
+Mappings:
+  AWSRegionAMI:
+    us-east-1:
+      AMI: ami-0c2b8ca1dad447f8a
+    us-west-2:
+      AMI: ami-0892d3c7ee96c0bf7
+    eu-west-1:
+      AMI: ami-0dc8d444ee2a42d8a
+    ap-southeast-1:
+      AMI: ami-0d058fe428540cd89
+
+Resources:
+  # VPC and Networking
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-VPC
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-IGW
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-PublicSubnet1
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-PublicRouteTable
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+
+  # Security Groups
+  WebServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH, HTTP, HTTPS, MQTT
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref SSHLocation
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 1883
+          ToPort: 1883
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8883
+          ToPort: 8883
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8086
+          ToPort: 8086
+          CidrIp: 0.0.0.0/0
+
+  # IAM Role for EC2
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+        - arn:aws:iam::aws:policy/AmazonSNSFullAccess
+        - arn:aws:iam::aws:policy/AmazonSESFullAccess
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref EC2Role
+
+  # S3 Bucket for data storage
+  DataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${EnvironmentName}-forest-fire-wsn-data
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DataRetentionRule
+            Status: Enabled
+            ExpirationInDays: 365
+
+  # SNS Topic for Alerts
+  AlertSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: ForestFireAlerts
+      TopicName: !Sub ${EnvironmentName}-forest-fire-alerts
+
+  # EC2 Instance for hosting the IoT applications
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      SecurityGroupIds:
+        - !GetAtt WebServerSecurityGroup.GroupId
+      KeyName: !Ref KeyPairName
+      ImageId: !FindInMap [AWSRegionAMI, !Ref 'AWS::Region', AMI]
+      SubnetId: !Ref PublicSubnet1
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: 50
+            VolumeType: gp2
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+          # Update and install dependencies
+          apt-get update
+          apt-get -y upgrade
+          apt-get -y install apt-transport-https ca-certificates curl software-properties-common python3-pip awscli
+
+          # Install Docker
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+          add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+          apt-get update
+          apt-get -y install docker-ce
+          usermod -aG docker ubuntu
+
+          # Install Docker Compose
+          pip3 install docker-compose
+
+          # Create app directory
+          mkdir -p /opt/forest-fire-wsn
+          cd /opt/forest-fire-wsn
+
+          # Download application files from S3
+          aws s3 cp s3://${EnvironmentName}-forest-fire-wsn-data/deployment/docker-compose.yml .
+          
+          # Create .env file with environment variables
+          cat > .env << 'EOL'
+          ENVIRONMENT=${EnvironmentName}
+          AWS_REGION=${AWS::Region}
+          SNS_TOPIC_ARN=${AlertSNSTopic}
+          BUCKET_NAME=${EnvironmentName}-forest-fire-wsn-data
+          EOL
+
+          # Create update script
+          cat > update.sh << 'EOL'
+          #!/bin/bash
+          cd /opt/forest-fire-wsn
+          aws s3 sync s3://${EnvironmentName}-forest-fire-wsn-data/deployment/ .
+          docker-compose pull
+          docker-compose up -d
+          EOL
+
+          chmod +x update.sh
+
+          # Setup cron to check for updates
+          echo "0 3 * * * /opt/forest-fire-wsn/update.sh > /var/log/wsn-update.log 2>&1" | crontab -
+
+          # Start the application
+          docker-compose up -d
+
+          # Signal completion
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource EC2Instance --region ${AWS::Region}
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-ForestFireWSN-Server
+
+  # Elastic IP for the EC2 instance
+  EC2ElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      InstanceId: !Ref EC2Instance
+
+  # CloudWatch Alarms
+  CPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: CPU usage alarm
+      AlarmActions:
+        - !Ref AlertSNSTopic
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 80
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref EC2Instance
+
+  # Route 53 DNS (if domain is managed by Route 53)
+  Route53RecordSet:
+    Type: AWS::Route53::RecordSet
+    Condition: CreateDNSRecord
+    Properties:
+      HostedZoneName: !Sub '${DomainName}.'
+      Name: !Sub '${SubDomainPrefix}.${DomainName}'
+      Type: A
+      TTL: 300
+      ResourceRecords:
+        - !Ref EC2ElasticIP
+
+Conditions:
+  CreateDNSRecord: !Not [!Equals [!Ref DomainName, '']]
+
+Parameters:
+  DomainName:
+    Description: Domain name for Route 53 record (leave blank to skip DNS creation)
+    Type: String
+    Default: ''
+
+  SubDomainPrefix:
+    Description: Subdomain prefix (e.g., 'wsn' for wsn.example.com)
+    Type: String
+    Default: 'wsn'
+
+Outputs:
+  WebsiteURL:
+    Description: URL of the web interface
+    Value: !Sub 'http://${EC2ElasticIP}'
+
+  MQTTEndpoint:
+    Description: MQTT broker endpoint
+    Value: !Sub '${EC2ElasticIP}:1883'
+
+  SSHAccess:
+    Description: SSH command to access the instance
+    Value: !Sub 'ssh -i ${KeyPairName}.pem ubuntu@${EC2ElasticIP}'
+
+  SNSTopicARN:
+    Description: ARN of the SNS topic for alerts
+    Value: !Ref AlertSNSTopic
+
+  S3BucketName:
+    Description: Name of the S3 bucket for data storage
+    Value: !Ref DataBucket
