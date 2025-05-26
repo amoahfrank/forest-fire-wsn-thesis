@@ -1,0 +1,53 @@
+MIT License
+
+Copyright (c) 2022-2025 Frank Amoah
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+ACADEMIC USE NOTICE:
+
+This software was originally developed as part of a Master's thesis in Embedded 
+Systems & IoT Engineering. While the code is provided under the MIT License for 
+open source use, we kindly request that academic users cite the original work 
+when using this software in research or academic contexts.
+
+Suggested Citation:
+Amoah, F. (2022). Design and Implementation of a Solar-Assisted WSN-LoRa IoT 
+Framework for Real-Time Forest Fire Detection and Monitoring. Master's Thesis, 
+[University Name]. Available: https://github.com/amoahfrank/forest-fire-wsn-thesis
+
+COMMERCIAL USE:
+
+This software may be used commercially under the terms of the MIT License. 
+However, users are encouraged to contribute improvements back to the open 
+source community and to consider the environmental impact and safety 
+critical nature of forest fire detection systems.
+
+DISCLAIMER:
+
+This software is designed for forest fire detection and monitoring purposes. 
+While it has been developed with safety and reliability in mind, users must 
+conduct their own validation and testing before deploying in safety-critical 
+environments. The authors assume no liability for the use of this software 
+in real-world fire detection scenarios.
+
+For questions about licensing, commercial use, or academic collaboration, 
+please contact: frank.amoah@student.edu
