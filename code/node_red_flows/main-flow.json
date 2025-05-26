@@ -1,0 +1,262 @@
+[
+    {
+        "id": "25d1a9e9.4cd066",
+        "type": "tab",
+        "label": "Forest Fire WSN Main Flow",
+        "disabled": false,
+        "info": "Main flow for processing sensor data from the LoRa WSN nodes"
+    },
+    {
+        "id": "67d2e34c.5c554c",
+        "type": "mqtt in",
+        "z": "25d1a9e9.4cd066",
+        "name": "LoRa Gateway Input",
+        "topic": "lora/+/rx",
+        "qos": "2",
+        "datatype": "json",
+        "broker": "5b2eea07.329724",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "x": 140,
+        "y": 120,
+        "wires": [
+            [
+                "a3b4d2e6.3ab65"
+            ]
+        ]
+    },
+    {
+        "id": "a3b4d2e6.3ab65",
+        "type": "function",
+        "z": "25d1a9e9.4cd066",
+        "name": "Decode Payload",
+        "func": "// Extract device information\nconst deviceId = msg.topic.split('/')[1];\n\n// Get payload data\nconst payload = msg.payload;\n\n// Check if we have actual data\nif (!payload || !payload.data) {\n    return null;\n}\n\n// Decode Base64 payload to JSON\nlet decodedData;\ntry {\n    const buffer = Buffer.from(payload.data, 'base64');\n    const jsonStr = buffer.toString();\n    decodedData = JSON.parse(jsonStr);\n} catch (err) {\n    node.error('Failed to decode payload: ' + err.message);\n    return null;\n}\n\n// Create message with decoded data\nmsg.deviceId = deviceId;\nmsg.payload = decodedData;\nmsg.rssi = payload.rxInfo && payload.rxInfo[0] ? payload.rxInfo[0].rssi : null;\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 120,
+        "wires": [
+            [
+                "e9c92d37.d44a3"
+            ]
+        ]
+    },
+    {
+        "id": "e9c92d37.d44a3",
+        "type": "switch",
+        "z": "25d1a9e9.4cd066",
+        "name": "Check Valid Data",
+        "property": "payload",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "nnull"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 1,
+        "x": 540,
+        "y": 120,
+        "wires": [
+            [
+                "c728a688.c0c428",
+                "751e3a4f.912874"
+            ]
+        ]
+    },
+    {
+        "id": "c728a688.c0c428",
+        "type": "function",
+        "z": "25d1a9e9.4cd066",
+        "name": "Format for InfluxDB",
+        "func": "// Extract data from payload\nconst { temp, hum, smoke, co, flame, bat, sol, risk, id, lat, lon, ts } = msg.payload;\n\n// Create measurement points\nconst points = [\n    {\n        measurement: \"environment\",\n        tags: {\n            nodeId: id || msg.deviceId,\n            firmware: msg.payload.fw || \"unknown\"\n        },\n        fields: {\n            temperature: temp,\n            humidity: hum,\n            smoke: smoke,\n            co: co,\n            flame: flame ? 1 : 0,\n            battery: bat,\n            solar: sol,\n            risk: risk,\n            rssi: msg.rssi\n        },\n        timestamp: (ts ? ts * 1000000000 : new Date().getTime() * 1000000) // Convert to nanoseconds\n    }\n];\n\n// Add GPS point if available\nif (lat && lon) {\n    const locationPoint = {\n        measurement: \"location\",\n        tags: {\n            nodeId: id || msg.deviceId\n        },\n        fields: {\n            latitude: lat,\n            longitude: lon\n        },\n        timestamp: (ts ? ts * 1000000000 : new Date().getTime() * 1000000) // Convert to nanoseconds\n    };\n    points.push(locationPoint);\n}\n\nreturn { payload: points };",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 740,
+        "y": 180,
+        "wires": [
+            [
+                "b45f1da2.6a615"
+            ]
+        ]
+    },
+    {
+        "id": "b45f1da2.6a615",
+        "type": "influxdb out",
+        "z": "25d1a9e9.4cd066",
+        "influxdb": "10aa7a39.f2ec26",
+        "name": "Store in InfluxDB",
+        "measurement": "",
+        "precision": "",
+        "retentionPolicy": "",
+        "database": "fire_monitoring",
+        "precisionV18FluxV20": "ms",
+        "retentionPolicyV18Flux": "",
+        "org": "wsn",
+        "bucket": "fire_monitoring",
+        "x": 950,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "751e3a4f.912874",
+        "type": "function",
+        "z": "25d1a9e9.4cd066",
+        "name": "Fire Risk Analysis",
+        "func": "// Extract data\nconst { temp, hum, smoke, co, flame, risk, id } = msg.payload;\n\n// Use provided risk score or calculate one\nlet fireRiskScore = risk;\nif (fireRiskScore === undefined) {\n    // Define thresholds (could come from node config)\n    const tempThreshold = 50;\n    const humThreshold = 30;\n    const smokeThreshold = 100;\n    const coThreshold = 70;\n    \n    // Calculate normalized risk factors (0-1 scale)\n    const tempRisk = Math.min(1, Math.max(0, (temp - tempThreshold * 0.8) / (tempThreshold * 0.4)));\n    const humRisk = Math.min(1, Math.max(0, (humThreshold * 1.2 - hum) / (humThreshold * 0.4)));\n    const smokeRisk = Math.min(1, Math.max(0, smoke / smokeThreshold));\n    const coRisk = Math.min(1, Math.max(0, co / coThreshold));\n    const flameRisk = flame ? 1 : 0;\n    \n    // Calculate weighted risk score\n    fireRiskScore = (tempRisk * 0.2) + (humRisk * 0.1) + (smokeRisk * 0.3) + (coRisk * 0.2) + (flameRisk * 0.2);\n}\n\n// Determine alert level\nlet alertLevel = \"normal\";\nif (fireRiskScore >= 0.8) {\n    alertLevel = \"critical\";\n} else if (fireRiskScore >= 0.6) {\n    alertLevel = \"high\";\n} else if (fireRiskScore >= 0.4) {\n    alertLevel = \"moderate\";\n} else if (fireRiskScore >= 0.2) {\n    alertLevel = \"low\";\n}\n\n// Create result message\nmsg.payload = {\n    nodeId: id || msg.deviceId,\n    temperature: temp,\n    humidity: hum,\n    smoke: smoke,\n    co: co,\n    flameDetected: flame ? true : false,\n    riskScore: fireRiskScore,\n    alertLevel: alertLevel,\n    timestamp: new Date().toISOString()\n};\n\n// Forward to appropriate output based on alert level\nif (alertLevel === \"critical\" || alertLevel === \"high\") {\n    return [msg, null];\n} else {\n    return [null, msg];\n}\n",
+        "outputs": 2,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 740,
+        "y": 80,
+        "wires": [
+            [
+                "b17e912d.ac675",
+                "47b2fb63.fc5d94"
+            ],
+            [
+                "47b2fb63.fc5d94"
+            ]
+        ]
+    },
+    {
+        "id": "b17e912d.ac675",
+        "type": "mqtt out",
+        "z": "25d1a9e9.4cd066",
+        "name": "Send Alert",
+        "topic": "wsn/alerts",
+        "qos": "1",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "5b2eea07.329724",
+        "x": 950,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "47b2fb63.fc5d94",
+        "type": "mqtt out",
+        "z": "25d1a9e9.4cd066",
+        "name": "Publish to Dashboard",
+        "topic": "wsn/nodes/${msg.payload.nodeId}/data",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "5b2eea07.329724",
+        "x": 970,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "e6c8c4da.7cc618",
+        "type": "comment",
+        "z": "25d1a9e9.4cd066",
+        "name": "Sensor Data Processing Pipeline",
+        "info": "This flow handles the processing of data from LoRa WSN sensor nodes:\n1. Receives raw data from the LoRa gateway\n2. Decodes the payload and formats it\n3. Analyzes fire risk based on sensor readings\n4. Raises alerts for high-risk situations\n5. Stores data in InfluxDB for visualization in Grafana\n6. Publishes processed data to MQTT for the web dashboard",
+        "x": 170,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "8fe8c8f7.451958",
+        "type": "tab",
+        "label": "Alert Management",
+        "disabled": false,
+        "info": "Handles alert notifications and escalation"
+    },
+    {
+        "id": "1234a5b6.cdef78",
+        "type": "mqtt in",
+        "z": "8fe8c8f7.451958",
+        "name": "Alert Subscriber",
+        "topic": "wsn/alerts",
+        "qos": "2",
+        "datatype": "json",
+        "broker": "5b2eea07.329724",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "x": 150,
+        "y": 120,
+        "wires": [
+            [
+                "9876c5d4.edcba9"
+            ]
+        ]
+    },
+    {
+        "id": "9876c5d4.edcba9",
+        "type": "function",
+        "z": "8fe8c8f7.451958",
+        "name": "Process Alert",
+        "func": "// Extract alert information\nconst alert = msg.payload;\n\n// Generate alert ID if not present\nif (!alert.alertId) {\n    alert.alertId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);\n}\n\n// Add timestamp if not present\nif (!alert.timestamp) {\n    alert.timestamp = new Date().toISOString();\n}\n\n// Create readable message for notifications\nconst nodeId = alert.nodeId;\nconst alertLevel = alert.alertLevel;\nconst riskScore = Math.round(alert.riskScore * 100);\n\nlet locationText = '';\nif (global.get(`node_${nodeId}_location`)) {\n    const location = global.get(`node_${nodeId}_location`);\n    locationText = ` at location (${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)})`;\n}\n\nconst alertMessage = `FIRE ALERT: ${alertLevel.toUpperCase()} risk level (${riskScore}%) detected at node ${nodeId}${locationText}. `;\n\nconst detailsMessage = `Temperature: ${alert.temperature}°C, Humidity: ${alert.humidity}%, `+\n                      `Smoke: ${alert.smoke} ppm, CO: ${alert.co} ppm, `+\n                      `Flame detected: ${alert.flameDetected ? 'YES' : 'No'}`;\n\n// Determine notification targets based on alert level\nlet targets = [];\nif (alertLevel === 'critical') {\n    targets = ['sms', 'email', 'dashboard'];\n} else if (alertLevel === 'high') {\n    targets = ['email', 'dashboard'];\n} else {\n    targets = ['dashboard'];\n}\n\n// Format messages for different targets\nconst msgs = [];\n\n// SMS message (short format)\nif (targets.includes('sms')) {\n    msgs.push({\n        topic: 'sms',\n        payload: {\n            to: global.get('alert_sms_recipients') || ['+250782345678'],\n            message: alertMessage\n        }\n    });\n}\n\n// Email message (detailed format)\nif (targets.includes('email')) {\n    msgs.push({\n        topic: 'email',\n        payload: {\n            to: global.get('alert_email_recipients') || ['forest-monitor@example.com'],\n            subject: `Forest Fire Alert - ${alertLevel.toUpperCase()} Risk Detected`,\n            message: alertMessage + '\\n\\n' + detailsMessage + '\\n\\nPlease check the monitoring dashboard for more details.'\n        }\n    });\n}\n\n// Dashboard notification (for UI alerts)\nif (targets.includes('dashboard')) {\n    msgs.push({\n        topic: 'dashboard',\n        payload: {\n            ...alert,\n            message: alertMessage,\n            details: detailsMessage\n        }\n    });\n}\n\n// Store alert in database\nmsg.payload = {\n    measurement: 'alerts',\n    tags: {\n        nodeId: alert.nodeId,\n        alertLevel: alert.alertLevel\n    },\n    fields: {\n        temperature: alert.temperature,\n        humidity: alert.humidity,\n        smoke: alert.smoke,\n        co: alert.co,\n        flameDetected: alert.flameDetected ? 1 : 0,\n        riskScore: alert.riskScore,\n        message: alertMessage\n    },\n    timestamp: new Date().getTime() * 1000000 // Convert to nanoseconds\n};\n\n// Add original message as last output\nmsg.originalAlert = alert;\nmsg.alertMessage = alertMessage;\nmsg.detailsMessage = detailsMessage;\nmsg.alertTargets = targets;\n\nmsg.parts = {\n    id: alert.alertId,\n    count: msgs.length + 1,\n    index: msgs.length,\n    type: 'array'\n};\nmsg.topic = 'influxdb';\n\n// Return all messages\nreturn [...msgs, msg];",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 120,
+        "wires": [
+            [
+                "ab12c3d4.ef5678"
+            ]
+        ]
+    },
+    {
+        "id": "5b2eea07.329724",
+        "type": "mqtt-broker",
+        "name": "EMQX Broker",
+        "broker": "emqx",
+        "port": "1883",
+        "clientid": "node-red-client",
+        "usetls": false,
+        "compatmode": false,
+        "keepalive": "60",
+        "cleansession": true,
+        "birthTopic": "node-red/status",
+        "birthQos": "0",
+        "birthPayload": "online",
+        "closeTopic": "node-red/status",
+        "closeQos": "0",
+        "closePayload": "offline",
+        "willTopic": "node-red/status",
+        "willQos": "0",
+        "willPayload": "unexpected-disconnect"
+    },
+    {
+        "id": "10aa7a39.f2ec26",
+        "type": "influxdb",
+        "hostname": "influxdb",
+        "port": "8086",
+        "protocol": "http",
+        "database": "fire_monitoring",
+        "name": "InfluxDB",
+        "usetls": false,
+        "tls": "",
+        "influxdbVersion": "2.0",
+        "url": "http://influxdb:8086",
+        "rejectUnauthorized": false,
+        "token": "wsntoken123456",
+        "org": "wsn",
+        "bucket": "fire_monitoring"
+    }
+]
