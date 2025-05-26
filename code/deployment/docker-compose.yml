@@ -1,0 +1,203 @@
+# Forest Fire Detection System - Docker Compose Configuration
+# Orchestrates the complete microservices architecture for development and production deployment
+
+version: '3.8'
+
+services:
+  # Node-RED Flow Engine - Core data processing and workflow orchestration
+  node-red:
+    image: nodered/node-red:latest
+    container_name: forest-fire-nodered
+    restart: unless-stopped
+    ports:
+      - "1880:1880"
+    volumes:
+      - node_red_data:/data
+      - ./node-red-config:/data/config
+    environment:
+      - NODE_RED_ENABLE_PROJECTS=true
+      - NODE_RED_ENABLE_SAFE_MODE=false
+    networks:
+      - forest-fire-network
+    depends_on:
+      - influxdb
+      - mqtt-broker
+
+  # InfluxDB Time-Series Database - Sensor data storage and analytics
+  influxdb:
+    image: influxdb:2.7
+    container_name: forest-fire-influxdb
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+      - influxdb_config:/etc/influxdb2
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=forestfire2022
+      - DOCKER_INFLUXDB_INIT_ORG=forest-fire-org
+      - DOCKER_INFLUXDB_INIT_BUCKET=sensor-data
+      - DOCKER_INFLUXDB_INIT_RETENTION=8760h  # 1 year
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=forest-fire-super-secret-auth-token
+    networks:
+      - forest-fire-network
+
+  # Grafana Visualization Platform - Real-time dashboards and alerting
+  grafana:
+    image: grafana/grafana:latest
+    container_name: forest-fire-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana-config/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana-config/datasources:/etc/grafana/provisioning/datasources
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=forestfire2022
+      - GF_INSTALL_PLUGINS=grafana-worldmap-panel,grafana-clock-panel,grafana-simple-json-datasource
+      - GF_FEATURE_TOGGLES_ENABLE=ngalert
+    networks:
+      - forest-fire-network
+    depends_on:
+      - influxdb
+
+  # MQTT Broker - Message queuing for IoT communication
+  mqtt-broker:
+    image: eclipse-mosquitto:2.0
+    container_name: forest-fire-mqtt
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"  # WebSocket port
+    volumes:
+      - mqtt_data:/mosquitto/data
+      - mqtt_logs:/mosquitto/log
+      - ./mosquitto-config:/mosquitto/config
+    networks:
+      - forest-fire-network
+
+  # MongoDB - Node metadata and configuration storage
+  mongodb:
+    image: mongo:6.0
+    container_name: forest-fire-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=forestfire2022
+      - MONGO_INITDB_DATABASE=forest-fire-db
+    networks:
+      - forest-fire-network
+
+  # Redis Cache - Session management and temporary data storage
+  redis:
+    image: redis:7-alpine
+    container_name: forest-fire-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --requirepass forestfire2022
+    networks:
+      - forest-fire-network
+
+  # Backend API Service - RESTful API for sensor node management
+  api-service:
+    build:
+      context: ../services
+      dockerfile: Dockerfile.api
+    container_name: forest-fire-api
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URL=mongodb://admin:forestfire2022@mongodb:27017/forest-fire-db?authSource=admin
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=forest-fire-super-secret-auth-token
+      - INFLUXDB_ORG=forest-fire-org
+      - INFLUXDB_BUCKET=sensor-data
+      - MQTT_BROKER_URL=mqtt://mqtt-broker:1883
+      - REDIS_URL=redis://:forestfire2022@redis:6379
+    networks:
+      - forest-fire-network
+    depends_on:
+      - mongodb
+      - influxdb
+      - mqtt-broker
+      - redis
+
+  # Frontend Web Application - React-based user interface
+  web-interface:
+    build:
+      context: ../web_interface
+      dockerfile: Dockerfile.web
+    container_name: forest-fire-web
+    restart: unless-stopped
+    ports:
+      - "3002:80"
+    environment:
+      - REACT_APP_API_URL=http://localhost:3001
+      - REACT_APP_MQTT_URL=ws://localhost:9001
+    networks:
+      - forest-fire-network
+    depends_on:
+      - api-service
+
+  # Nginx Reverse Proxy - Load balancing and SSL termination
+  nginx:
+    image: nginx:alpine
+    container_name: forest-fire-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx-config:/etc/nginx/conf.d
+      - ./ssl-certificates:/etc/nginx/ssl
+      - ./nginx-logs:/var/log/nginx
+    networks:
+      - forest-fire-network
+    depends_on:
+      - web-interface
+      - api-service
+      - grafana
+      - node-red
+
+# Persistent volume definitions for data persistence
+volumes:
+  node_red_data:
+    driver: local
+  influxdb_data:
+    driver: local
+  influxdb_config:
+    driver: local
+  grafana_data:
+    driver: local
+  mqtt_data:
+    driver: local
+  mqtt_logs:
+    driver: local
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+  redis_data:
+    driver: local
+
+# Network configuration for service communication
+networks:
+  forest-fire-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
