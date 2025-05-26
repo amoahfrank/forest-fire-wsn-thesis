@@ -1,0 +1,68 @@
+{
+  "name": "forest-fire-api-service",
+  "version": "2.1.3",
+  "description": "Backend API service for Forest Fire Detection System",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint . --ext .js",
+    "lint:fix": "eslint . --ext .js --fix",
+    "docker:build": "docker build -f Dockerfile.api -t forest-fire-api .",
+    "docker:run": "docker run -p 3001:3001 forest-fire-api"
+  },
+  "keywords": [
+    "iot",
+    "forest-fire",
+    "sensors",
+    "monitoring",
+    "api",
+    "nodejs"
+  ],
+  "author": "Frank Amoah <frank.amoah@student.edu>",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "express-validator": "^6.15.0",
+    "express-rate-limit": "^6.7.0",
+    "helmet": "^6.1.5",
+    "cors": "^2.8.5",
+    "morgan": "^1.10.0",
+    "compression": "^1.7.4",
+    "dotenv": "^16.0.3",
+    "mongodb": "^5.5.0",
+    "@influxdata/influxdb-client": "^1.33.2",
+    "mqtt": "^4.3.7",
+    "redis": "^4.6.7",
+    "jsonwebtoken": "^9.0.0",
+    "bcrypt": "^5.1.0",
+    "nodemailer": "^6.9.2",
+    "twilio": "^4.11.1",
+    "joi": "^17.9.2",
+    "winston": "^3.9.0",
+    "winston-daily-rotate-file": "^4.7.1"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22",
+    "jest": "^29.5.0",
+    "supertest": "^6.3.3",
+    "eslint": "^8.42.0",
+    "eslint-config-node": "^4.1.0",
+    "eslint-plugin-security": "^1.7.1"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/amoahfrank/forest-fire-wsn-thesis.git"
+  },
+  "bugs": {
+    "url": "https://github.com/amoahfrank/forest-fire-wsn-thesis/issues"
+  },
+  "homepage": "https://github.com/amoahfrank/forest-fire-wsn-thesis#readme"
+}
