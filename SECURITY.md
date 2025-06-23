@@ -15,8 +15,8 @@ The following versions of the Forest Fire Detection System are currently support
 ### Security Contact Information
 
 For security vulnerabilities, please contact:
-- **Email**: security@forestfire-detection.org
-- **Alternative**: frank.amoah@student.edu
+- **Email**: amoahfrank2013@gmail.com
+- **Alternative**: f.amoah@frankholds.win
 - **Response Time**: Within 48 hours
 
 ### Reporting Process
@@ -271,9 +271,7 @@ We follow a coordinated vulnerability disclosure process:
 
 ### Security Team
 - **Security Lead**: Frank Amoah
-- **Email**: security@forestfire-detection.org
-- **Emergency**: +1-XXX-XXX-XXXX
-- **PGP Key**: [Key fingerprint]
+- **Email**: amoahfrank2013@gmail.com
 
 ### External Resources
 - **Security Advisories**: [URL]
