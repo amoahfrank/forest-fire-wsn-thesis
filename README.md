@@ -228,7 +228,7 @@ pio run --target upload --environment heltec_wifi_lora_32_v2
 ### **Experimental Results Summary**
 - **Detection Accuracy**: >98% for fire conditions
 - **False Positive Rate**: <2% under normal conditions
-- **Communication Range**: Up to 5km in dense forest canopy
+- **Communication Range**: Up to 5km 
 - **Power Consumption**: 6+ months autonomous operation
 - **End-to-End Latency**: <3 seconds from sensor to alert
 - **Network Availability**: >99.5% uptime in field trials
@@ -301,7 +301,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🌟 Acknowledgments
 
-- **Academic Supervisors**: Dr. Aziz Ghazi and Prof. 
+- **Academic Supervisors**: Dr. Aziz Ghazi and Prof. Abdulrahim (Chef de Departement Informatique) 
 - **Research Institution**: [University/Ecole SUP Management]
 - **Funding Support**: N/A (no funding was available - personally funded)
 - **Open Source Community**: Contributors and maintainers of utilized libraries
