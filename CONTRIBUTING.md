@@ -314,7 +314,7 @@ Together, we can build more effective tools for protecting our forests and commu
 
 **Contact:**
 - GitHub: [@amoahfrank](https://github.com/amoahfrank)
-- Email: frank.amoah@student.edu
-- Academic Affiliation: [University/Institution]
+- Email: f.amoah@frankholds.win
+- Academic Affiliation: Ecole SUP Management, Fes.
 
 Last Updated: May 26, 2025
