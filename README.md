@@ -4,8 +4,7 @@
 **Author**: Frank Amoah  
 **Degree Program**: MSc Embedded Systems & IoT Engineering  
 **Submitted**: July 2022
-**Updated**: May 2025 (Complete Implementation)
-
+**Updated**: May 2025 
 ## Abstract
 Forest fires pose a severe threat to ecosystems, economies, and human safety, particularly in Sub-Saharan Africa where remote terrain and limited infrastructure hinder early detection. This thesis presents the design, implementation, and evaluation of a solar-assisted Wireless Sensor Network (WSN) using LoRa communication and IoT cloud analytics for autonomous, real-time forest fire detection. 
 
