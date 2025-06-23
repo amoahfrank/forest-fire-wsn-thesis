@@ -6,7 +6,7 @@ This directory contains additional resources, references, and supplementary mate
 
 ### Datasheets
 - Heltec LoRa ESP32 v2.1 microcontroller
-- BME680 environmental sensor (temperature, humidity, pressure, gas)
+- BME680 environmental sensor (temperature, humidity, pressure, gas) - (DHT22 was used initially until replaced with BME680)
 - MQ-2 smoke sensor
 - MQ-7 carbon monoxide sensor
 - YG1006 IR flame sensor
