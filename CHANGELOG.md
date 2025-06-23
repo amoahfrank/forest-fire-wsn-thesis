@@ -42,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 📊 Performance Metrics
 - **Detection Accuracy**: >98% for fire conditions
 - **False Positive Rate**: <2% under normal conditions
-- **Communication Range**: 5km in dense forest canopy (validated)
+- **Communication Range**: 5km in dense forest canopy
 - **Battery Life**: 6+ months autonomous operation
 - **Alert Latency**: <100ms for critical alerts
 - **System Throughput**: 10,000+ sensor readings per minute
@@ -198,7 +198,7 @@ For security vulnerabilities, please follow our [Security Policy](SECURITY.md) a
 
 - **GitHub Issues**: [Report bugs and request features](https://github.com/amoahfrank/forest-fire-wsn-thesis/issues)
 - **GitHub Discussions**: [Community discussions and Q&A](https://github.com/amoahfrank/forest-fire-wsn-thesis/discussions)
-- **Email**: frank.amoah@student.edu
+- **Email**: f.amoah@frankholds.win
 - **Academic Collaboration**: Contact for research partnerships and academic use
 
 ---
@@ -216,7 +216,7 @@ If you use this software in academic research, please cite:
   title={Design and Implementation of a Solar-Assisted WSN-LoRa IoT Framework for Real-Time Forest Fire Detection and Monitoring},
   author={Amoah, Frank},
   year={2022},
-  school={University Name},
+  school={Ecole SUP Management, Fes},
   type={Master's Thesis},
   url={https://github.com/amoahfrank/forest-fire-wsn-thesis}
 }
