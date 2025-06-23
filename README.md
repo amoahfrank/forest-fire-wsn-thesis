@@ -293,7 +293,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
   title={Design and Implementation of a Solar-Assisted WSN-LoRa IoT Framework for Real-Time Forest Fire Detection and Monitoring},
   author={Amoah, Frank},
   year={2022},
-  school={University Name},
+  school={Ecole SUP Management, Fes},
   type={Master's Thesis},
   url={https://github.com/amoahfrank/forest-fire-wsn-thesis}
 }
@@ -301,18 +301,18 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🌟 Acknowledgments
 
-- **Academic Supervisors**: Dr. [Name] and Prof. [Name]
-- **Research Institution**: [University/Institution Name]
-- **Funding Support**: [Grant/Funding Sources]
+- **Academic Supervisors**: Dr. Aziz Ghazi and Prof. 
+- **Research Institution**: [University/Ecole SUP Management]
+- **Funding Support**: N/A
 - **Open Source Community**: Contributors and maintainers of utilized libraries
-- **Field Testing Partners**: Local forest management agencies
+- **Field Testing Partners**: Local
 
 ## 📞 Contact & Support
 
 - **Author**: Frank Amoah
-- **Email**: frank.amoah@student.edu
+- **Email**: f.amoah@frankholds.win
 - **GitHub**: [@amoahfrank](https://github.com/amoahfrank)
-- **LinkedIn**: [Frank Amoah](https://linkedin.com/in/frank-amoah)
+- **LinkedIn**: [Frank Amoah](https://linkedin.com/in/frank-amoah-59653b83)
 
 ### **Support Channels**
 - **Issues**: [GitHub Issues](https://github.com/amoahfrank/forest-fire-wsn-thesis/issues)
@@ -323,7 +323,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🎯 Project Status: **COMPLETE IMPLEMENTATION** ✅
 
-This repository represents the **complete, production-ready implementation** of the forest fire detection system described in the master's thesis. All components have been developed, tested, and documented for real-world deployment.
+This repository represents the **complete, production-ready implementation** of the forest fire detection system described in the master's thesis. All components have been developed, and documented for real-world deployment.
 
 **Last Updated**: May 26, 2025  
 **Implementation Status**: Complete (v2.1.3)  
