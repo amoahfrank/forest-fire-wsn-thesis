@@ -11,7 +11,7 @@ Forest fires pose a severe threat to ecosystems, economies, and human safety, pa
 
 Each sensor node integrates temperature, humidity, smoke, CO, IR-flame, and GPS modules on an ESP32 platform, powered by a mini-solar photovoltaic array with Li-ion battery backup optimized via maximum power point tracking (MPPT). Data are transmitted over LoRa to a multi-channel gateway, then processed locally (fog layer) and in the cloud using Node-RED, MQTT, InfluxDB, and Grafana. 
 
-A weighted-fusion algorithm computes a "fire-risk" score at the edge, triggering tiered alerts (local buzzer/LED, SMS/email) when thresholds are breached. Experimental trials, covering sensor calibration, communication range (up to 5 km in dense canopy), power-budget analysis (6-month autonomy), detection accuracy (> 98%), and end-to-end latency (< 3 s); demonstrate the system's viability for rapid, low-cost deployment in remote forested areas.
+A weighted-fusion algorithm computes a "fire-risk" score at the edge, triggering tiered alerts (local buzzer/LED, SMS/email) when thresholds are breached. Experimental trials, covering sensor calibration, communication range, power-budget analysis (6-month autonomy), detection accuracy (> 98%), and end-to-end latency (< 3 s); demonstrate the system's viability for rapid, low-cost deployment in remote forested areas.
 
 ## 🚀 Complete System Implementation
 
@@ -128,13 +128,13 @@ forest-fire-wsn-thesis/
 
 #### **Edge Computing (Sensor Nodes)**
 - **Microcontroller**: Heltec WiFi LoRa 32 v2 (ESP32-based)
-- **Sensors**: DHT22 (Temp/Humidity), MQ-2 (Smoke), MQ-7 (CO), YG1006 (IR Flame)
+- **Sensors**: DHT22/BME680 (Temp/Humidity), MQ-2 (Smoke), MQ-7 (CO) (Optional if BME680 is used), YG1006 (IR Flame)
 - **Communication**: LoRa 868MHz, WiFi 802.11b/g/n
 - **Power**: Solar panel + Li-ion battery + MPPT controller
-- **Framework**: Arduino Core for ESP32, PlatformIO
+- **Framework**: Arduino Core for ESP32, PlatformIO, Expressif-IDF (for much control over the ESP32 microcontroller ESP-IDF was used backward compatible with the other frameworks)
 
 #### **Fog Computing (Gateway & Local Processing)**
-- **Message Broker**: Eclipse Mosquitto MQTT v3.1.1
+- **Message Broker**: Eclipse Mosquitto MQTT v3.1.1 | EMQX MQTT Server (This was used for the actual implementation and not eclipse mosquitto)
 - **Data Processing**: Node-RED flow-based programming
 - **Local Storage**: MongoDB (metadata), InfluxDB (time-series)
 - **API Server**: Node.js with Express.js framework
@@ -303,7 +303,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Academic Supervisors**: Dr. Aziz Ghazi and Prof. 
 - **Research Institution**: [University/Ecole SUP Management]
-- **Funding Support**: N/A
+- **Funding Support**: N/A (no funding was available - personally funded)
 - **Open Source Community**: Contributors and maintainers of utilized libraries
 - **Field Testing Partners**: Local
 
