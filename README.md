@@ -328,7 +328,7 @@ This repository represents the **complete, production-ready implementation** of 
 **Last Updated**: May 26, 2025  
 **Implementation Status**: Complete (v2.1.3)  
 **Documentation Status**: Comprehensive  
-**Testing Status**: Field-tested and validated  
+**Testing Status**: Local, in-house and urban tested (for 4 nodes within 5 Km for academic validation as a final year Master Spécialisé Project work)
 
 [![Build Status](https://github.com/amoahfrank/forest-fire-wsn-thesis/workflows/CI/badge.svg)](https://github.com/amoahfrank/forest-fire-wsn-thesis/actions)
 [![Documentation](https://img.shields.io/badge/docs-complete-brightgreen.svg)](https://github.com/amoahfrank/forest-fire-wsn-thesis/wiki)
