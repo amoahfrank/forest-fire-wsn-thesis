@@ -37,5 +37,3 @@ This directory contains additional resources, references, and supplementary mate
 - Communication range test methodology
 - Power consumption measurement protocol
 - Detection accuracy assessment framework
-
-Note: All resources listed adhere to the July 31, 2022 publication date cutoff for the thesis.
